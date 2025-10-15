@@ -77,10 +77,10 @@ async function verificarDisponibilidad(items) {
 // Función para disminuir la cantidad de unidades de los productos
 async function actualizarInventario(items) {
     for (const producto of items) {
-        const response = await axios.get(`http://localhost:3002/productos/${producto.id}`);
+        const productsBaseUrl = process.env.PRODUCTS_URL || 'http://products:3002';
+        const response = await axios.get(`${productsBaseUrl}/productos/${producto.id}`);
         const inventarioActual = response.data.inventario;
         const inv=inventarioActual - producto.cantidad;
-        const productsBaseUrl = process.env.PRODUCTS_URL || 'http://products:3002';
         await axios.put(`${productsBaseUrl}/productos/${producto.id}`, {
            inventario: inv
         });

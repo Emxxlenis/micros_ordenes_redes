@@ -7,11 +7,6 @@ app.use(express.json());
 
 app.use(ordenesController);
 
-// Health endpoint for container health checks
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
 const PORT = process.env.PORT || 3003;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Microservicio Ordenes ejecutandose en el puerto ${PORT}`);
