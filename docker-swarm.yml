@@ -1,0 +1,132 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: almacen
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - swarmnet
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  users:
+    image: microservicios-users:latest
+    environment:
+      - PORT=3001
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+    networks:
+      - swarmnet
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  products:
+    image: microservicios-products:latest
+    environment:
+      - PORT=3002
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mysql
+    networks:
+      - swarmnet
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  orders:
+    image: microservicios-orders:latest
+    environment:
+      - PORT=3003
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+      - PRODUCTS_URL=http://products:3002
+      - USERS_URL=http://users:3001
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mysql
+      - products
+      - users
+    networks:
+      - swarmnet
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    image: microservicios-frontend:latest
+    ports:
+      - "8080:80"
+    environment:
+      - USERS_URL=http://users:3001
+      - PRODUCTS_URL=http://products:3002
+      - ORDERS_URL=http://orders:3003
+    depends_on:
+      - users
+      - products
+      - orders
+    networks:
+      - swarmnet
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  haproxy:
+    image: microservicios-haproxy:latest
+    ports:
+      - "80:3001"
+      - "81:3002"
+      - "82:3003"
+      - "8081:8081"
+    networks:
+      - swarmnet
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  mysql_data:
+
+networks:
+  swarmnet:
+    external: true
+

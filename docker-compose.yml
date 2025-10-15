@@ -1,0 +1,100 @@
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: almacen
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appnet
+  users:
+    build: ./usuarios
+    container_name: users
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - PORT=3001
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+    networks:
+      - appnet
+
+  products:
+    build: ./productos
+    container_name: products
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+    depends_on:
+      - mysql
+    networks:
+      - appnet
+
+  orders:
+    build: ./ordenes
+    container_name: orders
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - DB_HOST=mysql
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+      - DB_NAME=almacen
+      - PRODUCTS_URL=http://products:3002
+      - USERS_URL=http://users:3001
+    depends_on:
+      - mysql
+      - products
+      - users
+    networks:
+      - appnet
+
+  frontend:
+    build: ./microWeb
+    container_name: frontend
+    ports:
+      - "8080:80"
+    environment:
+      - USERS_URL=http://users:3001
+      - PRODUCTS_URL=http://products:3002
+      - ORDERS_URL=http://orders:3003
+    depends_on:
+      - users
+      - products
+      - orders
+    networks:
+      - appnet
+
+volumes:
+  mysql-data:
+
+networks:
+  appnet:
+    driver: bridge
+

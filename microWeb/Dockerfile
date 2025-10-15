@@ -1,0 +1,17 @@
+FROM php:8.1-apache
+
+RUN a2enmod rewrite
+
+WORKDIR /var/www/html
+COPY . /var/www/html
+
+RUN chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && find /var/www/html -type f -exec chmod 644 {} \;
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost/ || exit 1
+
+CMD ["apache2-foreground"]
