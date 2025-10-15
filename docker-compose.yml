@@ -15,10 +15,11 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-padmin123"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     networks:
       - appnet
   users:
@@ -28,8 +29,7 @@ services:
     ports:
       - "3001:3001"
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
     environment:
       - PORT=3001
       - DB_HOST=mysql

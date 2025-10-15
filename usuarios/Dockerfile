@@ -6,11 +6,17 @@ ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
-# copiar package.json primero para cachear
 COPY package*.json ./
 
-# instalar dependencias (omit dev)
-RUN npm install --omit=dev
+# Endure flaky networks: pin registry and increase retries/timeouts
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+RUN npm config set registry "$NPM_REGISTRY" \
+  && npm config set fetch-retries 5 \
+  && npm config set fetch-retry-maxtimeout 600000 \
+  && npm config set fetch-retry-mintimeout 20000
+
+# Use lockfile when available
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 # copiar el resto del código
 COPY . .
